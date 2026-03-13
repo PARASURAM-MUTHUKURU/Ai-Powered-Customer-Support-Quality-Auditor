@@ -1,14 +1,21 @@
+print("Importing config...")
 from src.config import (
     EMBEDDING_MODEL, EMBEDDING_DIM, LLM_MODEL,
     CHUNK_SIZE, CHUNK_OVERLAP,
     QDRANT_URL, QDRANT_API_KEY, COLLECTION_NAME,
     GOOGLE_API_KEY
 )
+print("Importing document_loader...")
 from src.document_loader import load_document
+print("Importing chunker...")
 from src.chunker import get_recursive_chunker
+print("Importing embedder...")
 from src.embedder import GeminiEmbedder
+print("Importing vector_store...")
 from src.vector_store import QdrantVectorStore
+print("Importing llm...")
 from src.llm import GeminiLLM
+print("Imports in pipeline.py finished.")
 
 class RAGPipeline:
     def __init__(self):

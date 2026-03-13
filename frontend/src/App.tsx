@@ -72,16 +72,30 @@ function AppContent() {
   const [selectedAudit, setSelectedAudit] = useState<Audit | null>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterTab, setFilterTab] = useState('All');
 
   const userRole = session?.user?.user_metadata?.role || 'supervisor';
 
   const displayedAudits = React.useMemo(() => {
+    let filtered = audits;
     if (userRole === 'agent' && session?.user?.user_metadata?.name) {
       const myName = session.user.user_metadata.name.toLowerCase();
-      return audits.filter(a => a.agent_name?.toLowerCase() === myName);
+      filtered = filtered.filter(a => a.agent_name?.toLowerCase() === myName);
     }
-    return audits;
-  }, [audits, session, userRole]);
+    
+    if (filterTab === 'Flagged') {
+      return filtered.filter(a => a.violations && a.violations.length > 0);
+    }
+    
+    if (filterTab === 'Critical') {
+      return filtered.filter(a => 
+        (a.compliance_score !== undefined && a.compliance_score < 70) || 
+        (a.violations && a.violations.some((v: any) => ['Critical', 'High'].includes(v.severity)))
+      );
+    }
+    
+    return filtered;
+  }, [audits, session, userRole, filterTab]);
 
   const displayedAgents = React.useMemo(() => {
     if (userRole === 'agent' && session?.user?.user_metadata?.name) {
@@ -441,6 +455,8 @@ function AppContent() {
               setCollapsed={setSidebarCollapsed}
               loading={loading}
               onDeleteAudit={handleDeleteAudit}
+              activeTab={filterTab}
+              setActiveTab={setFilterTab}
             />
 
             {/* Right Side: Information (Audit Details + Transcript) */}

@@ -13,6 +13,8 @@ interface CallHistorySidebarProps {
   setCollapsed: (collapsed: boolean) => void;
   loading?: boolean;
   onDeleteAudit?: (id: number) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 export const CallHistorySidebar = ({
@@ -23,7 +25,9 @@ export const CallHistorySidebar = ({
   collapsed,
   setCollapsed,
   loading = false,
-  onDeleteAudit
+  onDeleteAudit,
+  activeTab,
+  setActiveTab
 }: CallHistorySidebarProps) => {
   return (
     <aside className={cn(
@@ -65,9 +69,10 @@ export const CallHistorySidebar = ({
           {['All', 'Flagged', 'Critical'].map(tab => (
             <button
               key={tab}
+              onClick={() => setActiveTab(tab)}
               className={cn(
                 "flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all",
-                tab === 'All' ? "bg-brand-accent text-white" : "text-zinc-500 hover:text-zinc-300"
+                activeTab === tab ? "bg-brand-accent text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
               )}
             >
               {tab}

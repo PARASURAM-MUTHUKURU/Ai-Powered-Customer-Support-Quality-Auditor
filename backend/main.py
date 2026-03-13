@@ -10,7 +10,6 @@ load_dotenv()
 load_dotenv(".env.local")
 
 from routers import agents, audits, analytics, ai, rag, config, alerts, reports
-
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -61,7 +60,7 @@ try:
     app.include_router(config.router)
     app.include_router(alerts.router)
     app.include_router(reports.router)
-    logger.info("Successfully loaded all system routers.")
+    logger.info("Successfully loaded system routers (RAG disabled).")
 except Exception as e:
     logger.error(f"FAILED to load one or more routers: {str(e)}")
     raise
