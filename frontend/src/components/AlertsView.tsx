@@ -25,9 +25,10 @@ interface Alert {
 
 interface AlertsViewProps {
     onAuditSelect: (auditId: number) => void;
+    userRole?: string;
 }
 
-export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
+export const AlertsView = ({ onAuditSelect, userRole = 'supervisor' }: AlertsViewProps) => {
     const { showToast } = useToast();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,7 +42,11 @@ export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
         setLoading(true);
         try {
             const resolvedParam = filter === 'all' ? '' : `?resolved=${filter === 'resolved'}`;
-            const response = await fetchWithAuth(`/api/alerts${resolvedParam}`);
+            const endpoint = userRole === 'agent' 
+                ? `/api/alerts/agent-notifications${resolvedParam}` 
+                : `/api/alerts${resolvedParam}`;
+                
+            const response = await fetchWithAuth(endpoint);
             if (!response.ok) throw new Error('Failed to fetch alerts');
             const data = await response.json();
             setAlerts(data);
@@ -54,6 +59,10 @@ export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
     };
 
     const handleResolve = async (id: number) => {
+        if (userRole !== 'supervisor') {
+            showToast('Only supervisors can resolve alerts', 'error');
+            return;
+        }
         try {
             const response = await fetchWithAuth(`/api/alerts/${id}/resolve`, { method: 'PATCH' });
             if (response.ok) {
@@ -74,12 +83,16 @@ export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-2">
                         <h2 className="text-4xl font-display font-black text-white tracking-tight flex items-center gap-3">
-                            Compliance <span className="text-brand-accent">Alerts</span>
+                            Compliance <span className="text-brand-accent">{userRole === 'agent' ? 'Notifications' : 'Alerts'}</span>
                             <div className="bg-brand-red/20 p-2 rounded-xl text-brand-red">
                                 <ShieldAlert size={24} />
                             </div>
                         </h2>
-                        <p className="text-zinc-400 font-medium">Monitor and resolve critical compliance violations in real-time.</p>
+                        <p className="text-zinc-400 font-medium">
+                            {userRole === 'agent' 
+                                ? 'Review compliance flags related to your sessions.' 
+                                : 'Monitor and resolve critical compliance violations in real-time.'}
+                        </p>
                     </div>
 
                     <div className="flex bg-brand-surface border border-brand-border p-1 rounded-xl">
@@ -107,7 +120,7 @@ export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
                 ) : alerts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 bg-brand-surface/40 border border-dashed border-brand-border rounded-[3rem] text-zinc-500 gap-4">
                         <CheckCircle size={64} className="opacity-10" />
-                        <p className="font-display font-bold text-xl">All clear! No alerts found.</p>
+                        <p className="font-display font-bold text-xl">All clear! No {userRole === 'agent' ? 'notifications' : 'alerts'} found.</p>
                     </div>
                 ) : (
                     <div className="grid gap-4">
@@ -152,7 +165,7 @@ export const AlertsView = ({ onAuditSelect }: AlertsViewProps) => {
                                     >
                                         <ExternalLink size={18} />
                                     </button>
-                                    {!alert.is_resolved && (
+                                    {!alert.is_resolved && userRole === 'supervisor' && (
                                         <button
                                             onClick={() => handleResolve(alert.id)}
                                             className="px-6 py-3 bg-brand-green/20 text-brand-green border border-brand-green/30 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-green hover:text-white transition-all"

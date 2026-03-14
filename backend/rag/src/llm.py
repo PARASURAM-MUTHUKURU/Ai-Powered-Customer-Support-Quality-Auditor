@@ -6,6 +6,7 @@ from google import genai
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from backoff_util import exponential_backoff
 from config.prompts import RAG_QA_PROMPT
+from database import increment_api_usage
 
 class GeminiLLM:
     def __init__(self, model_name: str, api_key: str):
@@ -15,6 +16,10 @@ class GeminiLLM:
     @exponential_backoff(max_retries=3)
     def generate(self, question: str, context: str) -> str:
         prompt = RAG_QA_PROMPT.format(context=context, question=question)
+        
+        # Increment Gemini usage (specific model)
+        increment_api_usage(self.model)
+        
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt

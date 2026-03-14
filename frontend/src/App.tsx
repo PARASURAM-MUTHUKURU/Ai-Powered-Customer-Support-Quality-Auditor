@@ -42,6 +42,7 @@ import { getApiUrl, fetchWithAuth } from './lib/api';
 import { LoginView } from './components/LoginView';
 import { AgentPortalView } from './components/AgentPortalView';
 import { SettingsView } from './components/SettingsView';
+import { UsageIndicator } from './components/UsageIndicator';
 import { supabase, initSupabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
@@ -177,11 +178,15 @@ function AppContent() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const alertsEndpoint = userRole === 'agent' 
+        ? '/api/alerts/agent-notifications?resolved=false' 
+        : '/api/alerts?resolved=false';
+
       const [agentsRes, auditsRes, analyticsRes, alertsRes] = await Promise.all([
         fetchWithAuth('/api/agents'),
         fetchWithAuth('/api/audits'),
         fetchWithAuth('/api/analytics'),
-        fetchWithAuth('/api/alerts?resolved=false')
+        fetchWithAuth(alertsEndpoint)
       ]);
 
       const agentsData = await agentsRes.json();
@@ -353,13 +358,18 @@ function AppContent() {
 
         <div className="flex items-center gap-2 md:gap-4">
           {userRole !== 'supervisor' && (
-            <button
-              onClick={() => setShowNewAuditModal(true)}
-              className="px-3 md:px-4 py-2 bg-brand-accent text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-brand-accent/90 transition-all flex items-center gap-2"
-            >
-              <Plus size={16} />
-              <span className="hidden md:inline">New Audit</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:block">
+                <UsageIndicator service="flash" compact className="bg-transparent border-none p-0 m-0 scale-90" />
+              </div>
+              <button
+                onClick={() => setShowNewAuditModal(true)}
+                className="px-3 md:px-4 py-2 bg-brand-accent text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-brand-accent/90 transition-all flex items-center gap-2"
+              >
+                <Plus size={16} />
+                <span className="hidden md:inline">New Audit</span>
+              </button>
+            </div>
           )}
 
           <div className="hidden md:flex items-center gap-4">
@@ -509,6 +519,7 @@ function AppContent() {
           />
         ) : view === 'alerts' ? (
           <AlertsView
+            userRole={userRole}
             onAuditSelect={(auditId) => {
               const audit = audits.find(a => a.id === auditId);
               if (audit) {

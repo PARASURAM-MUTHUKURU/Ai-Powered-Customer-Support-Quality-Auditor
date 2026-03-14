@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, Plus, LayoutPanelTop } from 'lucide-react';
+import { UsageIndicator } from './UsageIndicator';
 
 interface SettingsViewProps {
     onNewAuditClick: () => void;
@@ -37,13 +38,16 @@ export const SettingsView = ({ onNewAuditClick }: SettingsViewProps) => {
                                     Upload an audio file or paste a text transcript to initiate a manual quality assurance audit.
                                 </p>
                             </div>
-                            <button
-                                onClick={onNewAuditClick}
-                                className="px-4 py-2 bg-brand-accent text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-brand-accent/90 transition-all flex items-center gap-2 whitespace-nowrap"
-                            >
-                                <Plus size={16} />
-                                <span>New Audit</span>
-                            </button>
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    onClick={onNewAuditClick}
+                                    className="px-4 py-2 bg-brand-accent text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-brand-accent/90 transition-all flex items-center gap-2 whitespace-nowrap"
+                                >
+                                    <Plus size={16} />
+                                    <span>New Audit</span>
+                                </button>
+                                <UsageIndicator service="flash" compact className="bg-transparent border-none p-0 mb-0 mx-0" />
+                            </div>
                         </div>
                     </div>
                 </section>

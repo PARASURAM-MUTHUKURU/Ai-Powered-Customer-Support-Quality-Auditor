@@ -5,6 +5,7 @@ from google import genai
 # Add backend to path to import backoff_util
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from backoff_util import exponential_backoff
+from database import increment_api_usage
 
 class GeminiEmbedder:
     def __init__(self, model_name: str, api_key: str, dimension: int):
@@ -23,6 +24,10 @@ class GeminiEmbedder:
         try:
             for i in range(0, len(texts), batch_size):
                 batch = texts[i:i + batch_size]
+                
+                # Increment Gemini usage (Embedding)
+                increment_api_usage("gemini_embed")
+                
                 result = self.client.models.embed_content(
                     model=self.model,
                     contents=batch,
@@ -40,6 +45,9 @@ class GeminiEmbedder:
     @exponential_backoff(max_retries=3)
     def embed_query(self, query: str) -> list[float]:
         try:
+            # Increment Gemini usage (Embedding)
+            increment_api_usage("gemini_embed")
+            
             result = self.client.models.embed_content(
                 model=self.model,
                 contents=query,

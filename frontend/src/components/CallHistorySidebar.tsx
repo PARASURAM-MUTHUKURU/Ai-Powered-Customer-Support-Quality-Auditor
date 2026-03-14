@@ -3,6 +3,7 @@ import { Search, MessageSquare, Phone, AlertCircle, Plus, ChevronLeft, ChevronRi
 import { cn } from '../lib/utils';
 import { Audit } from '../types';
 import { AuditSkeleton } from './Skeleton';
+import { UsageIndicator } from './UsageIndicator';
 
 interface CallHistorySidebarProps {
   audits: Audit[];
@@ -151,6 +152,8 @@ export const CallHistorySidebar = ({
           ))
         )}
       </div>
+
+      <UsageIndicator />
 
       {/* Collapsed View Icons */}
       {collapsed && (

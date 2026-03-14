@@ -42,11 +42,13 @@ EXAMPLES:
 HEURISTICS for identification:
 - "Agent": Look for standard greetings, professional tone, and process-oriented speech.
 - "Customer": Look for the person stating the problem or providing details.
-- If names are explicitly mentioned, use them.
+- "Speaker X": For any additional speakers who are not the primary Agent or Customer, label them as "Speaker 3", "Speaker 4", etc.
+- If names are explicitly mentioned, use them (e.g., "John", "Sarah") instead of generic roles.
 
 CRITICAL:
 1. Ensure timestamps are accurate.
 2. Provide a confidence percentage for each attribution based on the clarity of the vocal signature.
+3. DO NOT label more than one person as "Agent" or "Customer" unless they are clearly the same identity.
 
 Provide ONLY the transcript text in the specified format."""
 

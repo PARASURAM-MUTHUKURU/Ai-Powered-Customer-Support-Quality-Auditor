@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends
-from auth_utils import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from auth_utils import get_current_user, require_role
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -90,7 +90,7 @@ def create_audit(audit: AuditRequest):
     finally:
         release_db_connection(conn)
 
-@router.delete("/{audit_id}")
+@router.delete("/{audit_id}", dependencies=[Depends(require_role("supervisor"))])
 def delete_audit(audit_id: int):
     conn = get_db_connection()
     try:

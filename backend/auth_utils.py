@@ -65,10 +65,41 @@ def require_role(role: str):
     """
     async def role_checker(user = Depends(get_current_user)):
         # Supabase stores roles in user_metadata or app_metadata
-        # Check both for flexibility
-        user_role = user.get("role") or (user.get("user_metadata", {}).get("role") if isinstance(user, dict) else getattr(user, "role", None))
+        # Generic role (like 'authenticated') is often at the top level, 
+        # so we prioritize custom roles in metadata.
+        user_metadata = {}
+        app_metadata = {}
         
+        if isinstance(user, dict):
+            user_metadata = user.get("user_metadata", {})
+            app_metadata = user.get("app_metadata", {})
+            # Prioritize metadata roles
+            user_role = user_metadata.get("role") or app_metadata.get("role") or user.get("role")
+        else:
+            # Handle User object
+            user_metadata = getattr(user, "user_metadata", {})
+            app_metadata = getattr(user, "app_metadata", {})
+            
+            # Metadata might be an object or a dict
+            meta_role = None
+            if isinstance(user_metadata, dict):
+                meta_role = user_metadata.get("role")
+            else:
+                meta_role = getattr(user_metadata, "role", None)
+                
+            if not meta_role:
+                if isinstance(app_metadata, dict):
+                    meta_role = app_metadata.get("role")
+                else:
+                    meta_role = getattr(app_metadata, "role", None)
+            
+            user_role = meta_role or getattr(user, "role", None)
+        
+        print(f"DEBUG: Auth Role Check - Expected: {role}, Detected: {user_role}")
         if user_role != role:
-            raise HTTPException(status_code=403, detail=f"Requires {role} role")
+            print(f"DEBUG: Access denied. User: {user_metadata.get('email', 'unknown')}")
+            raise HTTPException(status_code=403, detail=f"Requires {role} role (Detected: {user_role})")
+        
+        print(f"DEBUG: Access granted for {role}")
         return user
     return role_checker

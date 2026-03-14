@@ -53,3 +53,38 @@ def close_db_pool():
         db_pool.closeall()
     except Exception:
         pass
+
+def increment_api_usage(service: str):
+    """Increments the request count for a service on the current date."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO api_usage_stats (service, usage_date, request_count)
+                VALUES (%s, CURRENT_DATE, 1)
+                ON CONFLICT (service, usage_date)
+                DO UPDATE SET request_count = api_usage_stats.request_count + 1
+            """, (service,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error incrementing API usage: {e}")
+        conn.rollback()
+    finally:
+        release_db_connection(conn)
+
+def get_api_usage_stats():
+    """Returns today's usage stats for Gemini services."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT service, request_count
+                FROM api_usage_stats
+                WHERE usage_date = CURRENT_DATE
+            """)
+            return cur.fetchall()
+    except Exception as e:
+        print(f"Error fetching API usage stats: {e}")
+        return []
+    finally:
+        release_db_connection(conn)

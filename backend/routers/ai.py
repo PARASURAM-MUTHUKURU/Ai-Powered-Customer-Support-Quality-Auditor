@@ -14,6 +14,7 @@ BACKEND_PATH = Path(__file__).parent.parent
 sys.path.append(str(BACKEND_PATH))
 from backoff_util import async_exponential_backoff
 from config.prompts import AUDIT_PROMPT_TEMPLATE, TRANSCRIBE_DIARIZATION_PROMPT
+from database import increment_api_usage, get_api_usage_stats
 
 # Environment variables already loaded in main.py
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -34,6 +35,9 @@ async def ai_audit_transcript(request: AuditAIRequest):
         transcript_type=request.type,
         transcript=request.transcript
     )
+    
+    # Increment Gemini usage (specific model)
+    increment_api_usage(model_name)
     
     try:
         response = client.models.generate_content(
@@ -102,6 +106,9 @@ async def ai_transcribe_audio(request: TranscribeRequest):
             # Upload file via File API to support larger files
             uploaded_file = client.files.upload(file=temp_path, config={'mime_type': request.mime_type})
             
+            # Increment Gemini usage (specific model)
+            increment_api_usage(model_name)
+            
             response = client.models.generate_content(
                 model=model_name,
                 contents=[
@@ -127,3 +134,29 @@ async def ai_transcribe_audio(request: TranscribeRequest):
     except Exception as e:
         print(f"Gemini Transcribe Error: {e}")
         return {"error": str(e)}
+
+@router.get("/usage")
+async def get_gemini_usage():
+    """Returns Gemini API usage and limits for all tracked models."""
+    stats = get_api_usage_stats()
+    
+    # Define standard limits
+    limits = {
+        "gemini-2.5-flash": 20,
+        "gemini-2.5-flash-lite": 20,
+        "models/gemini-embedding-001": 1000,
+        "gemini_embed": 1000 # Legacy fallback
+    }
+    
+    usage_data = {}
+    for s in stats:
+        service_name = s["service"]
+        usage_data[service_name] = s["request_count"]
+        # Ensure we have a limit for any new gemini model found, default to 20
+        if service_name.startswith("gemini-") and service_name not in limits:
+            limits[service_name] = 20
+
+    return {
+        "usage": usage_data,
+        "limits": limits
+    }

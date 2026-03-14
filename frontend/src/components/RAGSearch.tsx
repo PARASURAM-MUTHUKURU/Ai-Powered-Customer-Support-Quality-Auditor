@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Loader2, FileText, Upload, AlertCircle, ExternalLink } from 'lucide-react';
 import { queryRAG, ingestFile, RAGSource } from '../services/ragService';
+import { UsageIndicator } from './UsageIndicator';
 
 export const RAGSearch: React.FC = () => {
     const [query, setQuery] = useState('');
@@ -46,8 +47,13 @@ export const RAGSearch: React.FC = () => {
     return (
         <div className="flex-1 overflow-y-auto p-8 space-y-8 max-w-5xl mx-auto">
             <div className="space-y-2">
-                <h2 className="text-3xl font-display font-bold text-white">Knowledge Base</h2>
-                <p className="text-zinc-400">Query your documents using AI for contextual answers.</p>
+                <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+                    <div>
+                        <h2 className="text-3xl font-display font-bold text-white">Knowledge Base</h2>
+                        <p className="text-zinc-400">Query your documents using AI for contextual answers.</p>
+                    </div>
+                    <UsageIndicator service="both" compact className="mb-0 mx-0 w-64 bg-transparent border-none md:pb-1" />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

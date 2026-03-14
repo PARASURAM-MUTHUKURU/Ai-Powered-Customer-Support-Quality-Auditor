@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MoreHorizontal, Loader2, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Agent } from '../types';
+import { UsageIndicator } from './UsageIndicator';
 
 interface AuditModalProps {
   show: boolean;
@@ -131,6 +132,8 @@ export const AuditModal = ({
               >
                 {isAuditing ? 'Analyzing with Gemini...' : 'Start Audit'}
               </button>
+
+              <UsageIndicator service="flash" className="mx-0 mb-0 bg-transparent border-none p-0" />
             </div>
           </motion.div>
         </div>
