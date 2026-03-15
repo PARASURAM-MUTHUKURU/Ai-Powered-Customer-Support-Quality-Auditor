@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Optional
 from fastapi import HTTPException, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -24,34 +25,55 @@ security = HTTPBearer()
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
     Verifies the Supabase JWT and returns the user information.
+    Supports both HS256 (Legacy) and ES256 (New ECC standard) algorithms.
     """
     token = credentials.credentials
     
     # 1. Local verification (Fastest & Preferred)
     if SUPABASE_JWT_SECRET:
         try:
-            # Supabase tokens are signed with the JWT Secret using HS256
+            # First, try to peek at the header to determine the algorithm
+            # python-jose's jwt.get_unverified_header is useful here
+            from jose import jwt as jose_jwt
+            header = jose_jwt.get_unverified_header(token)
+            alg = header.get("alg", "HS256")
+            
+            # Supabase tokens are signed with the JWT Secret
+            # Note: For ES256, Supabase typically uses a public key, but if they provide 
+            # a 'JWT Secret' for HS256 fallback, we use that. 
+            # If the alg is ES256, we try to decode it.
             payload = jwt.decode(
                 token, 
                 SUPABASE_JWT_SECRET, 
-                algorithms=["HS256"], 
-                options={"verify_aud": False} # Supabase uses "authenticated" or "anon" as audience
+                algorithms=["HS256", "ES256"], 
+                options={"verify_aud": False}
             )
             return payload
         except JWTError as e:
-            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+            # Log the specific error for debugging
+            logger = logging.getLogger("auth")
+            logger.warning(f"Local JWT verification failed: {str(e)}")
+            # Fall through to online verification if enabled
     
-    # 2. Online verification (Fallback if Secret is missing)
+    # 2. Online verification (Fallback if Secret fails or is missing)
     if supabase:
         try:
             # This calls the Supabase Auth API to verify the token
+            # This is robust against algorithm changes as Supabase manages the keys
             user_response = supabase.auth.get_user(token)
             if user_response and user_response.user:
                 return user_response.user
             else:
-                raise HTTPException(status_code=401, detail="User not found or token invalid")
+                raise HTTPException(status_code=401, detail="User not found or session expired")
         except Exception as e:
-            raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+            # Check for common "session_not_found" or 403 errors
+            error_msg = str(e)
+            if "session_not_found" in error_msg or "403" in error_msg:
+                raise HTTPException(
+                    status_code=401, 
+                    detail="Auth session not found or expired. Please logout and login again."
+                )
+            raise HTTPException(status_code=401, detail=f"Authentication failed: {error_msg}")
             
     # If neither method is available
     raise HTTPException(
