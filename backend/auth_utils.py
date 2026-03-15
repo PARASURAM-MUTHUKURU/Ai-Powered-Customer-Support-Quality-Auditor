@@ -32,27 +32,20 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
     # 1. Local verification (Fastest & Preferred)
     if SUPABASE_JWT_SECRET:
         try:
-            # First, try to peek at the header to determine the algorithm
-            # python-jose's jwt.get_unverified_header is useful here
-            from jose import jwt as jose_jwt
-            header = jose_jwt.get_unverified_header(token)
-            alg = header.get("alg", "HS256")
-            
-            # Supabase tokens are signed with the JWT Secret
-            # Note: For ES256, Supabase typically uses a public key, but if they provide 
-            # a 'JWT Secret' for HS256 fallback, we use that. 
-            # If the alg is ES256, we try to decode it.
+            # Note: Local verification ONLY works for HS256 tokens.
+            # New Supabase projects often use ES256, which requires a PEM public key.
+            # If local verification fails, we fall back to online verification below.
             payload = jwt.decode(
                 token, 
                 SUPABASE_JWT_SECRET, 
-                algorithms=["HS256", "ES256"], 
+                algorithms=["HS256"], 
                 options={"verify_aud": False}
             )
             return payload
-        except JWTError as e:
-            # Log the specific error for debugging
+        except Exception as e:
+            # Log the specific error for debugging and fall through
             logger = logging.getLogger("auth")
-            logger.warning(f"Local JWT verification failed: {str(e)}")
+            logger.warning(f"Local JWT verification skipped or failed (likely ES256): {str(e)}")
             # Fall through to online verification if enabled
     
     # 2. Online verification (Fallback if Secret fails or is missing)
