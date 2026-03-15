@@ -42,10 +42,14 @@ app = FastAPI(lifespan=lifespan)
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 logger.info(f"CORS Allowed Origins: {allowed_origins}")
 
+# If wildcard is used, allow_credentials must be False for safety/standard compliance
+# but for Supabase Bearer tokens, we're usually fine with False.
+is_wildcard = "*" in allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=not is_wildcard,  # Wildcard (*) cannot be used with allow_credentials=True
     allow_methods=["*"],
     allow_headers=["*"],
 )
