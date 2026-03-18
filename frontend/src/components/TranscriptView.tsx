@@ -28,9 +28,9 @@ export const TranscriptView = ({ selectedAudit, onUploadClick, userRole }: Trans
       const confidence = match ? match[3] : null;
       const message = match ? match[4].trim() : (fallbackMatch ? fallbackMatch[3].trim() : (simpleMatch ? simpleMatch[2].trim() : line));
 
-      const speakerType = name.toLowerCase().includes('agent') || name.toLowerCase().includes('sarah')
-        ? 'agent'
-        : 'customer';
+      const speakerType = name.toLowerCase().includes('customer') || name.toLowerCase().includes('client') || name.toLowerCase() === 'system'
+        ? 'customer'
+        : 'agent';
 
       // Find violations for this line index
       const lineViolations = selectedAudit.violations?.filter(v => v.transcript_line_index === index) || [];
