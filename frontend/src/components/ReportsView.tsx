@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Analytics, Audit } from '../types';
 import { cn } from '../lib/utils';
 import { useToast } from './Toasts';
+import { downloadFileWithAuth } from '../lib/api';
 
 interface ReportsViewProps {
   analytics: Analytics | null;
@@ -214,8 +215,11 @@ export const ReportsView = memo(({ analytics, audits, userRole = 'supervisor' }:
     link.download = `${name.replace(/\s+/g, '_')}.${extension}`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
     showToast(`Downloading ${format} file...`, 'info');
   };
 

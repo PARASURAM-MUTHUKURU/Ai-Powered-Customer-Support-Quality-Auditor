@@ -127,12 +127,16 @@ function AppContent() {
         if (config.supabaseUrl && config.supabaseAnonKey) {
           const client = initSupabase(config.supabaseUrl, config.supabaseAnonKey);
           if (client) {
-            const { data: { session } } = await client.auth.getSession();
-            setSession(session);
+            const { data: { session: currentSession } } = await client.auth.getSession();
+            setSession(currentSession);
 
-            client.auth.onAuthStateChange((_event, session) => {
-              setSession(session);
+            const { data: { subscription } } = client.auth.onAuthStateChange((_event, newSession) => {
+              setSession(newSession);
             });
+
+            return () => {
+              subscription.unsubscribe();
+            };
           }
         } else {
           throw new Error('Supabase configuration (URL or Anon Key) is missing in backend. Please check backend environment variables.');
@@ -146,9 +150,51 @@ function AppContent() {
       }
     };
 
+    let cleanup: (() => void) | undefined;
+    initAuth().then(cb => {
+      if (cb) cleanup = cb;
+    });
 
-    initAuth();
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [showToast]);
+
+  // Inactivity Timeout
+  useEffect(() => {
+    if (!session || !supabase) return;
+
+    // 30 minutes timeout
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+    let timeoutId: any;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        console.warn("User inactive for 30 minutes. Logging out.");
+        showToast("Logged out due to inactivity", "info");
+        await supabase?.auth.signOut();
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Events to track user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    // Initial start
+    resetTimer();
+
+    // Add listeners
+    events.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [session, showToast, supabase]);
 
   // New Audit State
   const [isAuditing, setIsAuditing] = useState(false);

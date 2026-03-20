@@ -2,9 +2,14 @@ const defaultUrl = 'http://localhost:3000';
 export const API_URL = import.meta.env.VITE_API_URL || defaultUrl;
 
 if (typeof window !== 'undefined') {
-  if (API_URL === defaultUrl && !window.location.hostname.includes('localhost')) {
-    console.warn("WARNING: VITE_API_URL is missing. API calls will likely fail in production. Using fallback: http://localhost:3000");
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (API_URL.includes('localhost') && !isLocalhost) {
+    console.error("CRITICAL ERROR: API URL is pointing to localhost, but the site is not running on localhost. API calls WILL fail.");
+  } else if (!import.meta.env.VITE_API_URL) {
+    console.warn(`VITE_API_URL is missing. Using fallback: ${defaultUrl}`);
   }
+  
   console.log(`API Base URL: ${API_URL}`);
 }
 
@@ -36,10 +41,17 @@ export const fetchWithAuth = async (path: string, options: RequestInit = {}) => 
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  return fetch(getApiUrl(path), {
+  const response = await fetch(getApiUrl(path), {
     ...options,
     headers
   });
+
+  if (response.status === 401 && supabase) {
+    console.warn("Session expired or unauthorized (401), logging out.");
+    await supabase.auth.signOut();
+  }
+
+  return response;
 };
 
 /**
@@ -57,8 +69,12 @@ export const downloadFileWithAuth = async (path: string, filename: string) => {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    
+    // Give the browser time to start the download before cleanup
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 100);
   } catch (error) {
     console.error('Error downloading file:', error);
     throw error;
