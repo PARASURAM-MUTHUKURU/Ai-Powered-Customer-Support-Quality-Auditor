@@ -22,17 +22,37 @@ class AuditRequest(BaseModel):
     suggestions: str
 
 @router.get("")
-def get_audits():
+def get_audits(user = Depends(get_current_user)):
     conn = get_db_connection()
     try:
         cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Handle both dict (payload) and User object formats
+        if isinstance(user, dict):
+            user_email = user.get("email")
+            user_name = user.get("user_metadata", {}).get("name")
+            user_role = user.get("user_metadata", {}).get("role") or user.get("role")
+        else:
+            user_email = getattr(user, "email", None)
+            user_metadata = getattr(user, "user_metadata", {})
+            user_name = user_metadata.get("name") if isinstance(user_metadata, dict) else getattr(user_metadata, "name", None)
+            user_role = (user_metadata.get("role") if isinstance(user_metadata, dict) else getattr(user_metadata, "role", None)) or getattr(user, "role", None)
+
         query = """
           SELECT a.*, ag.name as agent_name 
           FROM audits a 
           JOIN agents ag ON a.agent_id = ag.id 
-          ORDER BY a.created_at DESC
         """
-        cur.execute(query)
+        params = []
+        
+        # Isolation Logic: Agents only see their own audits
+        if user_role == 'agent':
+            query += " WHERE (LOWER(ag.email) = LOWER(%s) OR LOWER(ag.name) = LOWER(%s))"
+            params = [user_email, user_name]
+            
+        query += " ORDER BY a.created_at DESC"
+        
+        cur.execute(query, params)
         audits = cur.fetchall()
         cur.close()
     finally:

@@ -79,9 +79,17 @@ function AppContent() {
 
   const displayedAudits = React.useMemo(() => {
     let filtered = audits;
-    if (userRole === 'agent' && session?.user?.user_metadata?.name) {
-      const myName = session.user.user_metadata.name.toLowerCase();
-      filtered = filtered.filter(a => a.agent_name?.toLowerCase() === myName);
+    if (userRole === 'agent') {
+      const agentName = session?.user?.user_metadata?.name;
+      if (agentName) {
+        const myName = agentName.toLowerCase();
+        filtered = filtered.filter(a => a.agent_name?.toLowerCase() === myName);
+      } else {
+        // Fallback: if we're an agent but have no name in metadata, 
+        // show nothing to prevent accidental data exposure.
+        console.warn("Agent role detected but name is missing in metadata. Showing zero audits for safety.");
+        filtered = [];
+      }
     }
     
     if (filterTab === 'Flagged') {
