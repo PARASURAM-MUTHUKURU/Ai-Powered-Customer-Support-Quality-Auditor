@@ -1,5 +1,7 @@
 import os
 import logging
+import urllib.request
+import json
 from typing import Optional
 from fastapi import HTTPException, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -20,6 +22,17 @@ supabase: Optional[Client] = None
 if SUPABASE_URL and SUPABASE_ANON_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+# Fetch JWKS for local verification of RS256/ES256
+SUPABASE_JWKS = None
+if SUPABASE_URL:
+    try:
+        req = urllib.request.Request(f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json")
+        with urllib.request.urlopen(req, timeout=5) as response:
+            SUPABASE_JWKS = json.loads(response.read().decode())
+    except Exception as e:
+        logger = logging.getLogger("auth")
+        logger.warning(f"Could not fetch Supabase JWKS for local verification: {e}")
+
 security = HTTPBearer()
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
@@ -30,22 +43,35 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
     token = credentials.credentials
     
     # 1. Local verification (Fastest & Preferred)
-    if SUPABASE_JWT_SECRET:
+    if SUPABASE_JWT_SECRET or SUPABASE_JWKS:
         try:
-            # Note: Local verification ONLY works for HS256 tokens.
-            # New Supabase projects often use ES256, which requires a PEM public key.
-            # If local verification fails, we fall back to online verification below.
-            payload = jwt.decode(
-                token, 
-                SUPABASE_JWT_SECRET, 
-                algorithms=["HS256"], 
-                options={"verify_aud": False}
-            )
-            return payload
+            # Check the algorithm from unverified headers
+            unverified_headers = jwt.get_unverified_headers(token)
+            alg = unverified_headers.get("alg", "HS256")
+            
+            if alg == "HS256" and SUPABASE_JWT_SECRET:
+                payload = jwt.decode(
+                    token, 
+                    SUPABASE_JWT_SECRET, 
+                    algorithms=["HS256"], 
+                    options={"verify_aud": False}
+                )
+                return payload
+            elif alg in ["RS256", "ES256"] and SUPABASE_JWKS:
+                payload = jwt.decode(
+                    token,
+                    SUPABASE_JWKS,
+                    algorithms=["RS256", "ES256"],
+                    options={"verify_aud": False}
+                )
+                return payload
+            else:
+                logger = logging.getLogger("auth")
+                logger.warning(f"Local verification skipped: alg '{alg}' not supported or missing keys.")
         except Exception as e:
             # Log the specific error for debugging and fall through
             logger = logging.getLogger("auth")
-            logger.warning(f"Local JWT verification skipped or failed (likely ES256): {str(e)}")
+            logger.warning(f"Local JWT verification failed: {str(e)}")
             # Fall through to online verification if enabled
     
     # 2. Online verification (Fallback if Secret fails or is missing)

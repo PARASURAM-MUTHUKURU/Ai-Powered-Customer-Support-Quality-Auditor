@@ -19,8 +19,16 @@ class RAGQueryRequest(BaseModel):
 
 @router.post("/query")
 async def rag_query(request: RAGQueryRequest):
-    answer, sources = rag_pipeline.query(request.question)
-    return {"answer": answer, "sources": sources}
+    try:
+        answer, sources = rag_pipeline.query(request.question)
+        return {"answer": answer, "sources": sources}
+    except Exception as e:
+        print(f"RAG Query Error: {e}")
+        return {
+            "answer": "An internal error occurred while processing your request. Please try again later.",
+            "sources": [],
+            "error": str(e)
+        }
 
 @router.post("/ingest")
 async def rag_ingest(file: UploadFile = File(...)):

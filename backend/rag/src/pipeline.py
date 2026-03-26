@@ -36,6 +36,7 @@ class RAGPipeline:
     def ingest_file(self, file_path: str):
         text, source = load_document(file_path)
         if not text:
+            print(f"Skipping {file_path}: No text extracted.")
             return
 
         # NEW: Skip if already in Qdrant
@@ -49,7 +50,8 @@ class RAGPipeline:
         print(f"Chunked {len(contents)} pieces from {source}")
 
         embeddings = self.embedder.embed_documents(contents)
-        if not embeddings:
+        if not embeddings or len(embeddings) == 0:
+            print(f"FAILED to generate embeddings for {source}. Check API keys/quota.")
             return
 
         self.vector_store.upsert(embeddings, contents, source)
@@ -71,6 +73,11 @@ class RAGPipeline:
 
     def query(self, question: str, k: int = 5, source_filter: str = None) -> tuple[str, list[dict]]:
         query_vector = self.embedder.embed_query(question)
+        
+        # If embedding fails, return early instead of crashing Qdrant
+        if not query_vector or len(query_vector) == 0:
+            return "Unable to process query: Embedding generation failed. Please check your Gemini API key and quota.", []
+
         retrieved = self.vector_store.search(query_vector, k, source_filter)
 
         if not retrieved:

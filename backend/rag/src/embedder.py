@@ -39,11 +39,16 @@ class GeminiEmbedder:
                 all_embeddings.extend([e.values for e in result.embeddings])
             return all_embeddings
         except Exception as e:
-            print(f"Embedding failed: {e}")
+            print(f"CRITICAL: Embedding documents failed: {e}")
+            if "403" in str(e):
+                print("Suggestion: Ensure 'Generative Language API' is enabled and your API key is valid.")
             return []
 
     @exponential_backoff(max_retries=3)
     def embed_query(self, query: str) -> list[float]:
+        if not query:
+            return []
+            
         try:
             # Increment Gemini usage (Embedding)
             increment_api_usage("gemini_embed")
@@ -56,9 +61,12 @@ class GeminiEmbedder:
                     "output_dimensionality": self.dimension
                 }
             )
-            if not result.embeddings:
+            if not result or not result.embeddings or len(result.embeddings) == 0:
+                print("No embeddings returned from Gemini API.")
                 return []
             return result.embeddings[0].values
         except Exception as e:
-            print(f"Embedding query failed: {e}")
+            print(f"CRITICAL: Embedding query failed: {e}")
+            if "403" in str(e):
+                print("Suggestion: Check your GEMINI_API_KEY. The 403 error indicates permission issues.")
             return []
