@@ -1,4 +1,22 @@
 services:
+  db:
+    image: postgres:16
+    container_name: auditai-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: auditor_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auditor_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -7,6 +25,9 @@ services:
       - "3000:3000"
     env_file:
       - ./backend/.env.local
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/api/config" ]
       interval: 30s
@@ -14,7 +35,6 @@ services:
       retries: 3
     volumes:
       - data_volume:/app/data
-      - db_volume:/app/auditor_db
 
   frontend:
     build:
@@ -29,4 +49,4 @@ services:
 
 volumes:
   data_volume:
-  db_volume:
+  db_data:

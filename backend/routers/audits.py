@@ -31,7 +31,7 @@ def get_audits(user = Depends(get_current_user)):
         if isinstance(user, dict):
             user_email = user.get("email")
             user_name = user.get("user_metadata", {}).get("name")
-            user_role = user.get("user_metadata", {}).get("role") or user.get("role")
+            user_role = user.get("user_metadata", {}).get("role") or user.get("app_metadata", {}).get("role") or user.get("role")
         else:
             user_email = getattr(user, "email", None)
             user_metadata = getattr(user, "user_metadata", {})
@@ -45,8 +45,8 @@ def get_audits(user = Depends(get_current_user)):
         """
         params = []
         
-        # Isolation Logic: Agents only see their own audits
-        if user_role == 'agent':
+        # Isolation Logic: Only supervisors see all audits. Others only see their own.
+        if user_role != 'supervisor':
             query += " WHERE (LOWER(ag.email) = LOWER(%s) OR LOWER(ag.name) = LOWER(%s))"
             params = [user_email, user_name]
             

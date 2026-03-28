@@ -75,7 +75,7 @@ function AppContent() {
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState('All');
 
-  const userRole = session?.user?.user_metadata?.role || 'supervisor';
+  const userRole = session?.user?.user_metadata?.role || 'agent';
 
   const displayedAudits = React.useMemo(() => {
     let filtered = audits;
