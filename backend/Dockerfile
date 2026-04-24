@@ -21,6 +21,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libmagic1 \
+    libsndfile1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

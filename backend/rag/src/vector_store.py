@@ -4,18 +4,24 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 
 class QdrantVectorStore:
     def __init__(self, url: str, api_key: str, collection_name: str, vector_dim: int, reset: bool = False):
-        self.client = QdrantClient(url=url, api_key=api_key, timeout=60)
+        print(f"DEBUG: Initializing QdrantClient with URL: {url}")
+        self.client = QdrantClient(url=url, api_key=api_key, timeout=60, check_compatibility=False)
         self.collection_name = collection_name
-
+        
         # If reset is True, we wipe the old collection to fix schema mismatches
         if reset:
             print(f"FORCING RESET: Deleting collection '{collection_name}'...")
             try:
                 self.client.delete_collection(collection_name=collection_name)
-            except Exception:
-                pass 
-
-        collections = self.client.get_collections()
+            except Exception as e:
+                print(f"Reset failed (likely collection doesn't exist): {e}") 
+        
+        try:
+            print("DEBUG: Fetching collections from Qdrant...")
+            collections = self.client.get_collections()
+        except Exception as e:
+            print(f"CRITICAL: Failed to get collections from Qdrant at {url}: {e}")
+            raise
         exists = any(c.name == collection_name for c in collections.collections)
         
         if not exists:
