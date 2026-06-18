@@ -4,6 +4,7 @@ from psycopg2.pool import ThreadedConnectionPool
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 from pathlib import Path
+import socket
 
 # Load environment variables
 # In production, these are usually provided by the container environment.
@@ -14,10 +15,18 @@ load_dotenv(".env.local") # Fallback to .env.local if present
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip().strip("'").strip('"')
+    # If DATABASE_URL points to host "db" but "db" cannot be resolved (running outside Docker network),
+    # fallback to "localhost".
+    if "@db:" in DATABASE_URL or "@db/" in DATABASE_URL:
+        try:
+            socket.gethostbyname("db")
+        except socket.gaierror:
+            DATABASE_URL = DATABASE_URL.replace("@db:", "@localhost:").replace("@db/", "@localhost/")
 
 # Initialize connection pool
 # minconn=1, maxconn=20 gives us a good balance for a standard web app
 db_pool = ThreadedConnectionPool(1, 20, DATABASE_URL)
+
 
 def get_db_connection():
     """Returns a new psycopg2 connection from the pool, ensuring it's alive."""

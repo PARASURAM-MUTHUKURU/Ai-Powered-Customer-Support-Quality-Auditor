@@ -96,6 +96,19 @@ The **Dashboard Hub** fetches cumulative stats from the backend and renders them
 
 ---
 
+## 🧪 Testing & Quality Assurance
+
+AuditAI employs a multi-layered testing strategy to ensure the reliability of its GenAI evaluations and system performance.
+
+- **Manual Testing**: Comprehensive workflows for verifying data ingestion, RAG retrieval, and dashboard accuracy.
+- **AI Evaluation**: Specialized metrics (Faithfulness, Relevancy, Precision) to validate Gemini's audit logic.
+- **Performance Benchmarking**: Latency targets for transcription and AI synthesis.
+- **Results & Analysis**: Detailed performance results and discussion can be found in [RESULTS.md](RESULTS.md).
+
+For a detailed breakdown of our testing procedures, see [TESTING.md](TESTING.md).
+
+---
+
 ## 📁 Project Structure
 ```text
 transcipt/
@@ -111,3 +124,15 @@ transcipt/
 │   └── .env.local     # Frontend configuration
 └── data/              # Sample policy documents
 ```
+
+---
+
+## 📚 References
+
+For a detailed list of academic papers, technical documentation, and industry standards used in this project, see the [REFERENCES.md](REFERENCES.md) file.
+
+### Key Citations
+- **RAG Architecture**: Lewis, P., et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*. [arXiv:2005.11401](https://arxiv.org/abs/2005.11401).
+- **LLM Engine**: Gemini Team, Google. (2024). *Gemini 1.5: Unlocking multimodal understanding*. [arXiv:2403.05530](https://arxiv.org/abs/2403.05530).
+- **Infosys Springboard**: This project was developed as part of the **Infosys Springboard 6.0** GenAI track.
+
